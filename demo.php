@@ -23,6 +23,8 @@ if($url){
 	//URL is base64 encoded to prevent errors in some server setups.
 	$url = base64_decode($url);
 
+  
+  print_obj($url);
 	//This parameter lets users allow out-of-stock items to be displayed.
 	$hidden = isset($_GET['hidden'])?false:true;
 
@@ -37,6 +39,9 @@ if($url){
 	//The response is expected to be JSON. Decode it into associative arrays.
 	$details = json_decode($details, TRUE);
 
+  print_obj($details['nextUrl']);
+  print_obj($details['validTill']);
+  exit;
 	//The response is expected to contain these values.
 	$nextUrl = $details['nextUrl'];
 	$validTill = $details['validTill'];
@@ -56,18 +61,30 @@ if($url){
 
 	//Make sure there are products in the list.
 	if(count($products) > 0){
-	
+	$i=0;
 		foreach ($products as $product) {
 
-
-
-//exit;
 
 			//Hide out-of-stock items unless requested.
 			$inStock = $product['productBaseInfo']['productAttributes']['inStock'];
 			if(!$inStock && $hidden)
 				continue;
 			
+      //-==========================
+      $items[$i]['productId']=$product['productBaseInfo']['productIdentifier']['productId'];
+      $items[$i]['title']=$product['productBaseInfo']['productAttributes']['title'];
+      //$items[$i]['productDescription']=$product['productBaseInfo']['productAttributes']['productDescription'];
+      $items[$i]['maximumRetailPrice']=$product['productBaseInfo']['productAttributes']['maximumRetailPrice'];
+      $items[$i]['sellingPrice']=$product['productBaseInfo']['productAttributes']['sellingPrice'];
+      $items[$i]['productBrand']=$product['productBaseInfo']['productAttributes']['productBrand'];
+      $items[$i]['offers']=$product['productBaseInfo']['productAttributes']['offers'];
+      $i++;
+      //-==============================
+      
+      
+      
+      
+      
 			//Keep count.
 			$count++;
 
@@ -86,7 +103,8 @@ if($url){
 			$productUrl = $product['productBaseInfo']['productAttributes']['productUrl'];
 
 			//Setting up the table rows/columns for a 3x3 view.
-			$end = 0;
+		/*
+      $end = 0;
 			if($count%3==1)
 				echo '<tr><td>';
 			else if($count%3==2)
@@ -100,17 +118,21 @@ if($url){
 
 			if($end)
 				echo '</td></tr>';
+      */
                       
                         
                         
-print '<pre>';
-print_r($product);
-print '</pre>';
-                        
-                        
-                        break;
+
+
+
 
 		}
+    
+    
+    print $i;
+    print_obj($items);
+    
+    exit;
 	}
 
 	//A message if no products are printed.	
@@ -147,9 +169,7 @@ $home = json_decode($home, TRUE);
 
 $list = $home['apiGroups']['affiliate']['apiListings'];
 
-//print '<pre>';
-//print_r($list);
-//print '</pre>';
+//print_obj($list);
 //exit;
 
 echo '<h1>API Homepage</h1>Click on a category link to show available products from that category.<br><br>';
@@ -174,8 +194,18 @@ foreach ($list as $key => $data) {
 
 	echo "<strong>".$key."</strong>";
 	echo "<br>";
+  //print $data['availableVariants']['v0.1.0']['get'];
+  print '<br />';
 	//URL is base64 encoded when sent in query string.
+  
+  $jsone_url = $data['availableVariants']['v0.1.0']['get'];
+  echo "<br>";
+ print $product_no = product_node($jsone_url);
+  print '<br />';
 	echo '<a href="?url='.base64_encode($data['availableVariants']['v0.1.0']['get']).'">View Products &raquo;</a>';
+  
+  
+  
 }
 
 if($end!=1)
@@ -184,3 +214,75 @@ echo '</table>';
 
 //This was just a rough example created in limited time.
 //Good luck with the API.
+
+
+function print_obj($obj){
+  print '<pre>';
+  print_r($obj);
+  print '</pre>';
+}
+
+
+
+
+function product_node($url){
+  
+  
+  $flipkart = new \clusterdev\Flipkart("towards2s", "af515fd698f545f7a6bf7068f3827a44", "json");
+	//URL is base64 encoded to prevent errors in some server setups.
+	//$url = base64_decode($url);
+
+	//This parameter lets users allow out-of-stock items to be displayed.
+	$hidden = isset($_GET['hidden'])?false:true;
+
+	//Call the API using the URL.
+	$details = $flipkart->call_url($url);
+
+	if(!$details){
+		echo 'Error: Could not retrieve products list.';
+		exit();
+	}
+
+	//The response is expected to be JSON. Decode it into associative arrays.
+	$details = json_decode($details, TRUE);
+
+	//The response is expected to contain these values.
+	$nextUrl = $details['nextUrl'];
+	$validTill = $details['validTill'];
+	$products = $details['productInfoList'];
+
+	//The navigation buttons.
+	//echo '<h2><a href="?">HOME</a> | <a href="?url='.base64_encode($nextUrl).'">NEXT >></a></h2>';
+
+	//Message to be displayed if out-of-stock items are hidden.
+	if($hidden)
+		echo 'Products that are out of stock are hidden by default.<br><a href="?hidden=1&url='.base64_encode($url).'">SHOW OUT-OF-STOCK ITEMS</a><br><br>';
+
+	//Make sure there are products in the list.
+	if(count($products) > 0){
+	$i=0;
+		foreach ($products as $product) {
+
+			//Hide out-of-stock items unless requested.
+			$inStock = $product['productBaseInfo']['productAttributes']['inStock'];
+			if(!$inStock && $hidden)
+				continue;
+			
+      //-==========================
+      
+      $items[$i]['productId']=$product['productBaseInfo']['productIdentifier']['productId'];
+      $items[$i]['title']=$product['productBaseInfo']['productAttributes']['title'];
+      //$items[$i]['productDescription']=$product['productBaseInfo']['productAttributes']['productDescription'];
+      $items[$i]['maximumRetailPrice']=$product['productBaseInfo']['productAttributes']['maximumRetailPrice'];
+      $items[$i]['sellingPrice']=$product['productBaseInfo']['productAttributes']['sellingPrice'];
+      $items[$i]['productBrand']=$product['productBaseInfo']['productAttributes']['productBrand'];
+      $items[$i]['offers']=$product['productBaseInfo']['productAttributes']['offers'];
+      
+      $i++;
+		}
+    
+	}
+  
+  return $i;
+	
+}
